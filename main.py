@@ -10,14 +10,13 @@ import qrcode
 import base64
 from io import BytesIO
 
-# App setup
 app = FastAPI(
-    title="2FA Authentication System",
-    description="Secure authentication with Two Factor Authentication",
+    title="2FA Auth System",
+    description="Authentication API with Two Factor verification via Google Authenticator",
     version="1.0.0"
 )
 
-# CORS
+# Allow frontend requests
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -26,173 +25,176 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Password hasher
-password_hasher = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# bcrypt for password security
+hasher = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# JWT configuration
-SECRET_KEY = "2fa-super-secret-key-change-in-production"
-ALGORITHM = "HS256"
-TOKEN_EXPIRY_MINUTES = 30
+# Token config
+JWT_SECRET = "change-this-in-production-please"
+JWT_ALGO = "HS256"
+TOKEN_LIFETIME = 30
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+token_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
-# In-memory database
-users_db = {}
+# Simple in-memory store — will upgrade to real DB later
+user_store = {}
 
-# --- Models ---
-class UserRegister(BaseModel):
+# --- Request Models ---
+class RegisterRequest(BaseModel):
     username: str
     password: str
 
-class UserVerify(BaseModel):
+class VerifyRequest(BaseModel):
     username: str
     totp_code: str
 
-class UserLogin(BaseModel):
+class LoginRequest(BaseModel):
     username: str
     password: str
     totp_code: str
 
-# --- Helper Functions ---
-def hash_password(password: str):
-    return password_hasher.hash(password)
+# --- Utilities ---
+def encrypt_password(raw: str):
+    return hasher.hash(raw)
 
-def verify_password(plain: str, hashed: str):
-    return password_hasher.verify(plain, hashed)
+def check_password(raw: str, encrypted: str):
+    return hasher.verify(raw, encrypted)
 
-def generate_qr_code(username: str, secret: str):
-    totp_uri = pyotp.totp.TOTP(secret).provisioning_uri(
+def build_qr(username: str, otp_secret: str):
+    # Build URI that Google Authenticator can read
+    uri = pyotp.totp.TOTP(otp_secret).provisioning_uri(
         name=username,
         issuer_name="2FA Auth System"
     )
-    qr = qrcode.make(totp_uri)
-    buffer = BytesIO()
-    qr.save(buffer, format="PNG")
-    qr_base64 = base64.b64encode(buffer.getvalue()).decode()
-    return qr_base64
+    img = qrcode.make(uri)
+    buf = BytesIO()
+    img.save(buf, format="PNG")
+    return base64.b64encode(buf.getvalue()).decode()
 
-def generate_token(data: dict):
-    token_data = data.copy()
-    expiry = datetime.utcnow() + timedelta(minutes=TOKEN_EXPIRY_MINUTES)
-    token_data.update({"exp": expiry})
-    token = jwt.encode(token_data, SECRET_KEY, algorithm=ALGORITHM)
-    return token
+def mint_token(payload: dict):
+    data = payload.copy()
+    data["exp"] = datetime.utcnow() + timedelta(minutes=TOKEN_LIFETIME)
+    return jwt.encode(data, JWT_SECRET, algorithm=JWT_ALGO)
 
-def get_current_user(token: str = Depends(oauth2_scheme)):
-    auth_error = HTTPException(
+def extract_user(token: str = Depends(token_scheme)):
+    error = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Invalid or expired token",
+        detail="Session expired or invalid",
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
-            raise auth_error
+        claims = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGO])
+        username = claims.get("sub")
+        if not username:
+            raise error
     except JWTError:
-        raise auth_error
-    if username not in users_db:
-        raise auth_error
+        raise error
+    if username not in user_store:
+        raise error
     return username
 
-# --- Endpoints ---
+# --- Routes ---
 @app.get("/")
-def read_root():
+def home():
     return {
-        "message": "2FA Authentication System by Shrish",
+        "message": "2FA Auth System by Shrish",
         "version": "1.0",
-        "status": "running"
+        "status": "online"
     }
 
 @app.post("/register")
-def register(user: UserRegister):
-    if user.username in users_db:
+def register(body: RegisterRequest):
+    if body.username in user_store:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username already taken"
+            detail="That username is already taken"
         )
-    secret = pyotp.random_base32()
-    users_db[user.username] = {
-        "username": user.username,
-        "hashed_password": hash_password(user.password),
-        "totp_secret": secret,
-        "2fa_enabled": False
+
+    # Each user gets their own OTP secret
+    otp_secret = pyotp.random_base32()
+
+    user_store[body.username] = {
+        "username": body.username,
+        "password": encrypt_password(body.password),
+        "otp_secret": otp_secret,
+        "verified": False
     }
-    qr_code = generate_qr_code(user.username, secret)
+
     return {
-        "message": f"Account created for '{user.username}'!",
-        "instruction": "Scan this QR code with Google Authenticator",
-        "qr_code": qr_code,
-        "secret": secret
+        "message": f"Welcome {body.username}! Scan the QR code to activate 2FA.",
+        "instruction": "Open Google Authenticator and scan below",
+        "qr_code": build_qr(body.username, otp_secret),
+        "secret": otp_secret
     }
 
 @app.post("/verify-2fa")
-def verify_2fa(data: UserVerify):
-    if data.username not in users_db:
+def verify_2fa(body: VerifyRequest):
+    if body.username not in user_store:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+            detail="Account not found"
         )
-    user_record = users_db[data.username]
-    totp = pyotp.TOTP(user_record["totp_secret"])
-    if not totp.verify(data.totp_code):
+
+    record = user_store[body.username]
+    checker = pyotp.TOTP(record["otp_secret"])
+
+    if not checker.verify(body.totp_code):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid 2FA code. Please try again."
+            detail="That code didn't match — try again"
         )
-    users_db[data.username]["2fa_enabled"] = True
+
+    # Mark account as 2FA verified
+    user_store[body.username]["verified"] = True
+
     return {
-        "message": f"2FA successfully enabled for '{data.username}'!",
-        "status": "2FA verified and active"
+        "message": f"2FA is now active on your account!",
+        "status": "verified"
     }
 
-# NEW — Full login endpoint with 2FA
 @app.post("/login")
-def login(user: UserLogin):
-    # Step 1 — Check if user exists
-    if user.username not in users_db:
+def login(body: LoginRequest):
+    if body.username not in user_store:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+            detail="No account found with that username"
         )
 
-    user_record = users_db[user.username]
+    record = user_store[body.username]
 
-    # Step 2 — Check if 2FA is enabled
-    if not user_record["2fa_enabled"]:
+    # Must complete 2FA setup before logging in
+    if not record["verified"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Please complete 2FA setup first"
+            detail="Please complete your 2FA setup first"
         )
 
-    # Step 3 — Verify password
-    if not verify_password(user.password, user_record["hashed_password"]):
+    # Wrong password
+    if not check_password(body.password, record["password"]):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect password"
         )
 
-    # Step 4 — Verify TOTP code from phone
-    totp = pyotp.TOTP(user_record["totp_secret"])
-    if not totp.verify(user.totp_code):
+    # Wrong OTP code
+    checker = pyotp.TOTP(record["otp_secret"])
+    if not checker.verify(body.totp_code):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid 2FA code. Please try again."
+            detail="Invalid 2FA code — check your authenticator app"
         )
 
-    # Step 5 — All checks passed — generate JWT token
-    access_token = generate_token(data={"sub": user.username})
+    # All good — issue token
+    token = mint_token({"sub": body.username})
     return {
-        "message": f"Welcome back {user.username}! 2FA verified successfully.",
-        "access_token": access_token,
+        "message": f"Hey {body.username}, you're in!",
+        "access_token": token,
         "token_type": "bearer"
     }
 
-# Protected dashboard
 @app.get("/dashboard")
-def dashboard(current_user: str = Depends(get_current_user)):
+def dashboard(active_user: str = Depends(extract_user)):
     return {
-        "message": f"Hey {current_user}, your identity has been fully verified!",
+        "message": f"Welcome {active_user}, both factors verified!",
         "security": "Password ✅ + 2FA Code ✅",
-        "data": "You are accessing protected data with 2FA security."
+        "data": "You have successfully accessed the protected area."
     }

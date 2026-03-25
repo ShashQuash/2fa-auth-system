@@ -13,7 +13,7 @@
 
         body {
             font-family: 'Segoe UI', Arial, sans-serif;
-            background: linear-gradient(135deg, #0a0a2e 0%, #1a1a4e 50%, #0a0a2e 100%);
+            background: #000000;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -72,7 +72,7 @@
         }
 
         input::placeholder { color: rgba(255,255,255,0.4); }
-        input:focus { border-color: #ffd700; background: rgba(255,255,255,0.12); }
+        input:focus { border-color: #a855f7; background: rgba(255,255,255,0.12); }
 
         button {
             width: 100%;
@@ -89,16 +89,10 @@
         button:hover { opacity: 0.9; transform: translateY(-1px); }
         button:active { transform: translateY(0px); }
 
-        .btn-gold { background: linear-gradient(135deg, #ffd700, #ffaa00); color: #1a1a1a; }
+        .btn-purple { background: linear-gradient(135deg, #a855f7, #7c3aed); color: white; }
         .btn-blue { background-color: #2196F3; color: white; }
         .btn-green { background-color: #4CAF50; color: white; }
         .btn-red { background-color: #e53935; color: white; }
-        .btn-outline {
-            background: transparent;
-            border: 1px solid rgba(255,255,255,0.3);
-            color: rgba(255,255,255,0.7);
-            margin-top: 5px;
-        }
 
         .alert {
             text-align: center;
@@ -111,7 +105,7 @@
 
         .alert-success { background: rgba(76,175,80,0.2); color: #81c784; }
         .alert-error { background: rgba(229,57,53,0.2); color: #ef9a9a; }
-        .alert-info { background: rgba(33,150,243,0.2); color: #90caf9; }
+        .alert-info { background: rgba(168,85,247,0.2); color: #d8b4fe; }
 
         .page { display: none; }
         .page.active { display: block; }
@@ -124,13 +118,12 @@
         }
 
         .footer-text span {
-            color: #ffd700;
+            color: #a855f7;
             cursor: pointer;
         }
 
         .footer-text span:hover { text-decoration: underline; }
 
-        /* QR Code section */
         .qr-container {
             text-align: center;
             margin: 20px 0;
@@ -140,7 +133,7 @@
             width: 200px;
             height: 200px;
             border-radius: 12px;
-            border: 3px solid #ffd700;
+            border: 3px solid #a855f7;
             padding: 8px;
             background: white;
         }
@@ -154,18 +147,17 @@
         }
 
         .secret-box {
-            background: rgba(255,215,0,0.1);
-            border: 1px solid rgba(255,215,0,0.3);
+            background: rgba(168,85,247,0.1);
+            border: 1px solid rgba(168,85,247,0.3);
             border-radius: 8px;
             padding: 10px;
             text-align: center;
-            color: #ffd700;
+            color: #a855f7;
             font-size: 13px;
             margin: 10px 0;
             word-break: break-all;
         }
 
-        /* Dashboard */
         .dashboard-box {
             background: rgba(255,255,255,0.05);
             border-radius: 8px;
@@ -179,13 +171,13 @@
 
         .tag {
             display: inline-block;
-            background: rgba(255,215,0,0.15);
-            color: #ffd700;
+            background: rgba(168,85,247,0.15);
+            color: #a855f7;
             padding: 3px 10px;
             border-radius: 20px;
             font-size: 12px;
             margin: 3px;
-            border: 1px solid rgba(255,215,0,0.3);
+            border: 1px solid rgba(168,85,247,0.3);
         }
 
         .totp-input {
@@ -193,7 +185,7 @@
             font-size: 24px !important;
             letter-spacing: 8px;
             font-weight: bold;
-            color: #ffd700 !important;
+            color: #a855f7 !important;
         }
     </style>
 </head>
@@ -205,15 +197,15 @@
 
     <!-- Register Page -->
     <div id="registerPage" class="page active">
-        <h1>🎓 Create Account</h1>
+        <h1>🔐 Create Account</h1>
         <p class="subtitle">Register to set up 2FA protection</p>
         <input type="text" id="regUsername" placeholder="Choose a username" />
         <input type="password" id="regPassword" placeholder="Choose a password"
-               onkeydown="if(event.key==='Enter') handleRegister()" />
-        <button class="btn-gold" onclick="handleRegister()">Register</button>
+               onkeydown="if(event.key==='Enter') submitRegistration()" />
+        <button class="btn-purple" onclick="submitRegistration()">Register</button>
         <div id="registerAlert" class="alert"></div>
         <div class="footer-text">
-            Already have an account? <span onclick="showPage('loginPage')">Login here</span>
+            Already have an account? <span onclick="switchPage('loginPage')">Login here</span>
         </div>
     </div>
 
@@ -228,7 +220,7 @@
             Can't scan? Enter this secret key manually in Google Authenticator:
         </p>
         <div class="secret-box" id="secretKey"></div>
-        <button class="btn-gold" onclick="showPage('verifyPage')">
+        <button class="btn-purple" onclick="switchPage('verifyPage')">
             I've scanned it ✓
         </button>
     </div>
@@ -241,8 +233,8 @@
                class="totp-input"
                placeholder="000000"
                maxlength="6"
-               onkeydown="if(event.key==='Enter') handleVerify()" />
-        <button class="btn-gold" onclick="handleVerify()">Verify & Activate 2FA</button>
+               onkeydown="if(event.key==='Enter') confirmTwoFactor()" />
+        <button class="btn-purple" onclick="confirmTwoFactor()">Verify & Activate 2FA</button>
         <div id="verifyAlert" class="alert"></div>
     </div>
 
@@ -256,11 +248,11 @@
                class="totp-input"
                placeholder="000000"
                maxlength="6"
-               onkeydown="if(event.key==='Enter') handleLogin()" />
-        <button class="btn-gold" onclick="handleLogin()">Login with 2FA</button>
+               onkeydown="if(event.key==='Enter') submitLogin()" />
+        <button class="btn-purple" onclick="submitLogin()">Login with 2FA</button>
         <div id="loginAlert" class="alert"></div>
         <div class="footer-text">
-            New here? <span onclick="showPage('registerPage')">Create an account</span>
+            New here? <span onclick="switchPage('registerPage')">Create an account</span>
         </div>
     </div>
 
@@ -274,14 +266,14 @@
             <span class="tag">🔐 2FA Verified</span>
             <span class="tag">⚡ JWT Active</span>
         </div>
-        <button class="btn-red" onclick="handleLogout()">Logout</button>
+        <button class="btn-red" onclick="signOut()">Logout</button>
     </div>
 
 </div>
 
 <script>
-    const API_URL = "http://127.0.0.1:8000";
-    let currentUsername = "";
+    const BASE_URL = "http://127.0.0.1:8000";
+    let activeUser = "";
 
     // ---- Security Symbol Snowfall ----
     const canvas = document.getElementById('bgCanvas');
@@ -295,7 +287,6 @@
         canvas.height = window.innerHeight;
     });
 
-    // Security symbols
     const symbols = [
         '🔐', '🔑', '🛡️', '⚡', '🔒', '✅',
         '2FA', 'JWT', 'AES', 'SSL', 'OTP',
@@ -311,21 +302,18 @@
             this.x = Math.random() * canvas.width;
             this.y = Math.random() * -canvas.height;
             this.symbol = symbols[Math.floor(Math.random() * symbols.length)];
-            this.size = Math.random() * 10 + 8;
+            this.size = Math.random() * 16 + 14;
             this.speedY = Math.random() * 0.8 + 0.3;
             this.speedX = (Math.random() - 0.5) * 0.4;
-            this.opacity = Math.random() * 0.4 + 0.1;
+            this.opacity = Math.random() * 0.4 + 0.15;
             this.wobble = Math.random() * Math.PI * 2;
             this.wobbleSpeed = Math.random() * 0.02 + 0.005;
         }
 
         update() {
-            // Gentle wobble left and right
             this.wobble += this.wobbleSpeed;
             this.x += Math.sin(this.wobble) * 0.5 + this.speedX;
             this.y += this.speedY;
-
-            // Reset when reaches bottom
             if (this.y > canvas.height + 30) {
                 this.init();
                 this.y = -30;
@@ -336,13 +324,12 @@
             ctx.save();
             ctx.globalAlpha = this.opacity;
             ctx.font = `${this.size}px monospace`;
-            ctx.fillStyle = '#c084fc';
+            ctx.fillStyle = '#a855f7';
             ctx.fillText(this.symbol, this.x, this.y);
             ctx.restore();
         }
     }
 
-    // Create snowflakes
     const snowflakes = [];
     for (let i = 0; i < 80; i++) {
         const flake = new Snowflake();
@@ -363,29 +350,28 @@
 
     // ---- App Logic ----
 
-    function showPage(pageId) {
+    function switchPage(pageId) {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.getElementById(pageId).classList.add('active');
     }
 
-    function showAlert(elementId, message, type) {
+    function displayMessage(elementId, message, type) {
         const el = document.getElementById(elementId);
         el.textContent = message;
         el.className = `alert alert-${type}`;
         el.style.display = 'block';
     }
 
-    // Register
-    async function handleRegister() {
+    async function submitRegistration() {
         const username = document.getElementById('regUsername').value.trim();
         const password = document.getElementById('regPassword').value.trim();
 
         if (!username || !password) {
-            showAlert('registerAlert', 'Please fill in all fields.', 'error');
+            displayMessage('registerAlert', 'Please fill in all fields.', 'error');
             return;
         }
 
-        const response = await fetch(`${API_URL}/register`, {
+        const response = await fetch(`${BASE_URL}/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password })
@@ -394,32 +380,28 @@
         const data = await response.json();
 
         if (data.detail) {
-            showAlert('registerAlert', data.detail, 'error');
+            displayMessage('registerAlert', data.detail, 'error');
         } else {
-            // Store username for verify step
-            currentUsername = username;
-
-            // Show QR code page
+            activeUser = username;
             document.getElementById('qrImage').src = `data:image/png;base64,${data.qr_code}`;
             document.getElementById('secretKey').textContent = data.secret;
-            showPage('qrPage');
+            switchPage('qrPage');
         }
     }
 
-    // Verify 2FA setup
-    async function handleVerify() {
+    async function confirmTwoFactor() {
         const code = document.getElementById('verifyCode').value.trim();
 
         if (!code || code.length !== 6) {
-            showAlert('verifyAlert', 'Please enter a valid 6 digit code.', 'error');
+            displayMessage('verifyAlert', 'Please enter a valid 6 digit code.', 'error');
             return;
         }
 
-        const response = await fetch(`${API_URL}/verify-2fa`, {
+        const response = await fetch(`${BASE_URL}/verify-2fa`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                username: currentUsername,
+                username: activeUser,
                 totp_code: code
             })
         });
@@ -427,25 +409,24 @@
         const data = await response.json();
 
         if (data.detail) {
-            showAlert('verifyAlert', data.detail, 'error');
+            displayMessage('verifyAlert', data.detail, 'error');
         } else {
-            showAlert('verifyAlert', '2FA activated! Redirecting to login...', 'success');
-            setTimeout(() => showPage('loginPage'), 1500);
+            displayMessage('verifyAlert', '2FA activated! Redirecting to login...', 'success');
+            setTimeout(() => switchPage('loginPage'), 1500);
         }
     }
 
-    // Login with 2FA
-    async function handleLogin() {
+    async function submitLogin() {
         const username = document.getElementById('loginUsername').value.trim();
         const password = document.getElementById('loginPassword').value.trim();
         const totpCode = document.getElementById('loginTotp').value.trim();
 
         if (!username || !password || !totpCode) {
-            showAlert('loginAlert', 'Please fill in all fields.', 'error');
+            displayMessage('loginAlert', 'Please fill in all fields.', 'error');
             return;
         }
 
-        const response = await fetch(`${API_URL}/login`, {
+        const response = await fetch(`${BASE_URL}/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -458,43 +439,40 @@
         const data = await response.json();
 
         if (data.detail) {
-            showAlert('loginAlert', data.detail, 'error');
+            displayMessage('loginAlert', data.detail, 'error');
         } else {
-            localStorage.setItem('auth_token_2fa', data.access_token);
-            loadDashboard();
+            localStorage.setItem('session_key', data.access_token);
+            fetchDashboard();
         }
     }
 
-    // Load dashboard
-    async function loadDashboard() {
-        const token = localStorage.getItem('auth_token_2fa');
+    async function fetchDashboard() {
+        const token = localStorage.getItem('session_key');
 
-        const response = await fetch(`${API_URL}/dashboard`, {
+        const response = await fetch(`${BASE_URL}/dashboard`, {
             method: 'GET',
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
         if (response.status === 401) {
-            showPage('loginPage');
+            switchPage('loginPage');
             return;
         }
 
         const data = await response.json();
         document.getElementById('dashboardContent').innerHTML =
             `<strong>${data.message}</strong><br><br>${data.security}<br><br>${data.data}`;
-        showPage('dashboardPage');
+        switchPage('dashboardPage');
     }
 
-    // Logout
-    function handleLogout() {
-        localStorage.removeItem('auth_token_2fa');
-        showPage('loginPage');
+    function signOut() {
+        localStorage.removeItem('session_key');
+        switchPage('loginPage');
     }
 
-    // Auto login if token exists
     window.onload = function() {
-        const token = localStorage.getItem('auth_token_2fa');
-        if (token) loadDashboard();
+        const token = localStorage.getItem('session_key');
+        if (token) fetchDashboard();
     }
 </script>
 
