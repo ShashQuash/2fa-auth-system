@@ -7,6 +7,15 @@ Built by Shrish Arunesh — CS student in Berlin passionate about cybersecurity 
 
 ---
 
+## 🌐 Live Demo
+
+| | Link |
+|---|---|
+| **Frontend** | [Click to visit](https://shashquash.github.io/2fa-auth-system/frontend) |
+| **API Docs** | [Click to visit](https://twofa-auth-system.onrender.com/docs) |
+
+---
+
 ## 🛠️ Tech Stack
 
 - **Python** — core language
