@@ -3,7 +3,7 @@
 A secure Two Factor Authentication system built with FastAPI and TOTP, 
 featuring Google Authenticator integration.
 
-Built by Shrish Arunesh — CS student in Berlin passionate about cybersecurity and backend development. This project was built as a hands-on learning exercise to deeply understand authentication systems, security concepts and full stack development.
+Built by Shrish Arunesh — CS student in Berlin, Germany, progressing in cybersecurity and backend development. This project was built as a hands-on learning exercise to deeply understand authentication systems, security concepts and full stack development.
 
 ---
 
