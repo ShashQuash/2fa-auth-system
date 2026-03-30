@@ -28,10 +28,9 @@ app.add_middleware(
 # bcrypt for password security
 hasher = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# Token config
-JWT_SECRET = "change-this-in-production-please"
+JWT_SECRET = "change-this-in-production-please" # WARNING: Move this to an environment variable before any real deployment
 JWT_ALGO = "HS256"
-TOKEN_LIFETIME = 30
+TOKEN_LIFETIME = 30 # Token expires after 30 minutes
 
 token_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
@@ -52,7 +51,6 @@ class LoginRequest(BaseModel):
     password: str
     totp_code: str
 
-# --- Utilities ---
 def encrypt_password(raw: str):
     return hasher.hash(raw)
 
@@ -92,7 +90,6 @@ def extract_user(token: str = Depends(token_scheme)):
         raise error
     return username
 
-# --- Routes ---
 @app.get("/")
 def home():
     return {

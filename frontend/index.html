@@ -272,10 +272,10 @@
 </div>
 
 <script>
+    // Base URL for all API calls
     const BASE_URL = "https://twofa-auth-system.onrender.com";
     let activeUser = "";
 
-    // ---- Security Symbol Snowfall ----
     const canvas = document.getElementById('bgCanvas');
     const ctx = canvas.getContext('2d');
 
@@ -347,8 +347,6 @@
     }
 
     animate();
-
-    // ---- App Logic ----
 
     function switchPage(pageId) {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
