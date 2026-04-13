@@ -1,8 +1,8 @@
 # 2FA Authentication System 🔐
 
-A secure Two Factor Authentication system built with FastAPI and TOTP, featuring Google Authenticator integration.
+A two-factor authentication system built with FastAPI, implementing TOTP-based login, bcrypt password hashing, and JWT session management — integrated with Google Authenticator.
 
-Built by Shrish Arunesh, CS student in Berlin, Germany, in cybersecurity and backend development. This project was built as a hands-on learning exercise to deeply understand authentication systems, security concepts and full stack development.
+Built by Shrish Arunesh — CS student in Berlin, focused on cybersecurity and backend development.
 
 ---
 
@@ -30,23 +30,22 @@ Built by Shrish Arunesh, CS student in Berlin, Germany, in cybersecurity and bac
 ## 🔍 Features
 
 - User registration with automatic secret key generation
-- QR code generation - scan with Google Authenticator
-- TOTP verification - 6 digit codes that change every 30 seconds
-- Full 2FA login - password + TOTP code required
+- QR code generation — scan with Google Authenticator
+- TOTP verification — 6-digit codes that rotate every 30 seconds
+- Full 2FA login — password + TOTP code both required
 - JWT token issued only after both checks pass
 - Protected dashboard accessible only with valid token
-- Security symbol snowfall animation frontend
 
 ---
 
 ## 🔐 How 2FA Works
 
-1. User registers → server generates unique secret key
-2. Secret key converted to QR code
+1. User registers → server generates a unique secret key
+2. Secret key is converted to a QR code
 3. User scans QR code with Google Authenticator
 4. Phone and server now share the same secret key
-5. Every 30 seconds both generate the same 6 digit code independently
-6. At login - user enters password + current 6 digit code
+5. Every 30 seconds, both independently generate the same 6-digit code
+6. At login — user enters password + current 6-digit code
 7. Server verifies both → issues JWT token
 
 ---
@@ -63,31 +62,6 @@ Built by Shrish Arunesh, CS student in Berlin, Germany, in cybersecurity and bac
 
 ---
 
-## 🚧 More Projects Coming
-
-This is the second in a series of security-focused backend projects. More coming soon, follow the [GitHub profile](https://github.com/ShashQuash) to stay updated.
-
----
-
 ## 👨‍💻 Author
 
 Shrish Arunesh · [Portfolio](https://shashquash.github.io/portfolio) · [GitHub](https://github.com/ShashQuash)
-
----
-
-## 📚 Learning Journey
-
-This project was built as part of my self-directed learning journey into cybersecurity and backend development. Before building this I had no prior experience with authentication systems or security concepts.
-
-Through building this project I deeply studied and now understand:
-
-- **Why passwords must never be stored as plain text** and how bcrypt solves this by being intentionally slow
-- **How TOTP works mathematically** - how a phone and server can independently generate the same 6 digit code every 30 seconds using just a shared secret key and the current time
-- **Why 2FA is significantly more secure** than passwords alone - separating "something you know" from "something you have"
-- **How QR codes transfer secrets** - the scan is the only interaction needed between the phone and server
-- **JWT token flow** - how stateless authentication works without the server needing to remember anything
-- **Full stack deployment** - connecting a Python backend to a JavaScript frontend across different hosting platforms
-
-I used AI as a learning assistant throughout this project, to explain concepts deeply, guide my understanding, and help debug issues. Every concept was studied until I could explain it in my own words before moving forward. The goal was never to copy code but to genuinely understand what I was building and why.
-
-Continuously honing xpanding my skills in cybersecurity and backend development, building real projects slowly and deeply rather than rushing through tutorials.
