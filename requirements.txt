@@ -2,7 +2,8 @@ fastapi
 uvicorn
 passlib
 bcrypt==4.0.1
-python-jose
+python-jose[cryptography]
 pyotp
 qrcode
 pillow
+pydantic>=2.0

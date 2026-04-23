@@ -1,67 +1,81 @@
-# 2FA Authentication System 🔐
+# 2FA Authentication System
 
-A two-factor authentication system built with FastAPI, implementing TOTP-based login, bcrypt password hashing, and JWT session management — integrated with Google Authenticator.
+Two-factor authentication system built with FastAPI, implementing TOTP-based login, bcrypt password hashing, and JWT session management — integrated with Google Authenticator.
 
 Built by Shrish Arunesh — CS student in Berlin, focused on cybersecurity and backend development.
 
 ---
 
-## 🌐 Live Demo
+## Live Demo
 
-| | Link |
+| | |
 |---|---|
-| **Frontend** | [Click to visit](https://shashquash.github.io/2fa-auth-system/frontend) |
-| **API Docs** | [Click to visit](https://twofa-auth-system.onrender.com/docs) |
+| Frontend | [shashquash.github.io/2fa-auth-system/frontend](https://shashquash.github.io/2fa-auth-system/frontend) |
+| API Docs | [twofa-auth-system.onrender.com/docs](https://twofa-auth-system.onrender.com/docs) |
 
 ---
 
-## 🛠️ Tech Stack
+## Stack
 
-- **Python** - core language
-- **FastAPI** - backend API framework
-- **pyotp** - TOTP code generation and verification
-- **qrcode** - QR code generation for Google Authenticator
-- **bcrypt** - secure password hashing
-- **JWT** - session authentication
-- **HTML, CSS, JavaScript** - frontend
+Python · FastAPI · pyotp · qrcode · bcrypt · JWT · HTML · CSS · JavaScript
 
 ---
 
-## 🔍 Features
+## How 2FA Works
 
-- User registration with automatic secret key generation
-- QR code generation — scan with Google Authenticator
-- TOTP verification — 6-digit codes that rotate every 30 seconds
-- Full 2FA login — password + TOTP code both required
-- JWT token issued only after both checks pass
-- Protected dashboard accessible only with valid token
-
----
-
-## 🔐 How 2FA Works
-
-1. User registers → server generates a unique secret key
-2. Secret key is converted to a QR code
+1. User registers → server generates a unique TOTP secret key
+2. Secret key is encoded into a QR code
 3. User scans QR code with Google Authenticator
-4. Phone and server now share the same secret key
-5. Every 30 seconds, both independently generate the same 6-digit code
-6. At login — user enters password + current 6-digit code
+4. Phone and server now share the same secret — neither transmits it again
+5. Every 30 seconds both independently generate the same 6-digit code (RFC 6238)
+6. At login — user submits password + current 6-digit code
 7. Server verifies both → issues JWT token
 
 ---
 
-## 📡 API Endpoints
+## API Endpoints
 
-| Method | Endpoint      | Description                | Auth Required |
-|--------|---------------|----------------------------|---------------|
-| GET    | `/`           | API status                 | No            |
-| POST   | `/register`   | Register + get QR code     | No            |
-| POST   | `/verify-2fa` | Verify TOTP setup          | No            |
-| POST   | `/login`      | Login with password + TOTP | No            |
-| GET    | `/dashboard`  | Protected dashboard        | Yes           |
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | `/` | Status check | No |
+| POST | `/register` | Register + receive QR code | No |
+| POST | `/verify-2fa` | Confirm TOTP setup | No |
+| POST | `/login` | Login with password + TOTP | No |
+| GET | `/dashboard` | Protected endpoint | Yes |
 
 ---
 
-## 👨‍💻 Author
+## Running Locally
+
+```bash
+git clone https://github.com/ShashQuash/2fa-auth-system.git
+cd 2fa-auth-system
+python -m venv venv
+venv\Scripts\activate        # Windows
+source venv/bin/activate     # macOS / Linux
+pip install -r requirements.txt
+python -m uvicorn main:app --reload
+```
+
+API at `http://127.0.0.1:8000` · Docs at `http://127.0.0.1:8000/docs`
+
+Open `frontend/index.html` with Live Server in VS Code to use the frontend.
+
+---
+
+## Project Structure
+
+```
+2fa-auth-system/
+├── main.py
+├── requirements.txt
+├── README.md
+└── frontend/
+    └── index.html
+```
+
+---
+
+## Author
 
 Shrish Arunesh · [Portfolio](https://shashquash.github.io/portfolio) · [GitHub](https://github.com/ShashQuash)

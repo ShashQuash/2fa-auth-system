@@ -1,478 +1,754 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2FA Auth System</title>
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2fa-auth — two factor setup</title>
+<link href="https://fonts.googleapis.com/css2?family=Departure+Mono&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #141210;
+  --bg2: #1a1714;
+  --bg3: #201d1a;
+  --rule: #2a2520;
+  --rule2: #332e28;
+  --text: #d8d0c4;
+  --dim: #7a6e60;
+  --muted: #3d362e;
+  --amber: #c8883a;
+  --amber-dim: rgba(200,136,58,0.1);
+  --amber-line: rgba(200,136,58,0.22);
+  --amber-bright: #e0a050;
+  --red: #b85040;
+  --red-dim: rgba(184,80,64,0.1);
+  --mono: 'Departure Mono', monospace;
+  --body: 'DM Sans', sans-serif;
+}
 
-        body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            background: #000000;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            overflow: hidden;
-        }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
 
-        #bgCanvas {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 0;
-        }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--body);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
 
-        .card {
-            position: relative;
-            z-index: 1;
-            background: rgba(255, 255, 255, 0.07);
-            backdrop-filter: blur(14px);
-            -webkit-backdrop-filter: blur(14px);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            padding: 40px;
-            border-radius: 16px;
-            width: 100%;
-            max-width: 440px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-        }
+.graph-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(var(--rule) 1px, transparent 1px),
+    linear-gradient(90deg, var(--rule) 1px, transparent 1px);
+  background-size: 40px 40px;
+  opacity: 0.4;
+}
 
-        h1 {
-            text-align: center;
-            color: #ffffff;
-            margin-bottom: 8px;
-            font-size: 22px;
-        }
+.grain {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 200px;
+}
 
-        .subtitle {
-            text-align: center;
-            color: rgba(255,255,255,0.4);
-            font-size: 13px;
-            margin-bottom: 25px;
-        }
+.shell {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
 
-        input {
-            width: 100%;
-            padding: 12px 15px;
-            margin: 7px 0;
-            border: 1px solid rgba(255,255,255,0.2);
-            border-radius: 8px;
-            font-size: 14px;
-            outline: none;
-            background: rgba(255,255,255,0.08);
-            color: #ffffff;
-            transition: border 0.2s;
-        }
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 32px;
+  border-bottom: 1px solid var(--rule2);
+}
 
-        input::placeholder { color: rgba(255,255,255,0.4); }
-        input:focus { border-color: #a855f7; background: rgba(255,255,255,0.12); }
+.topbar-id {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--amber);
+  letter-spacing: 0.06em;
+}
 
-        button {
-            width: 100%;
-            padding: 12px;
-            margin: 8px 0;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: bold;
-            transition: opacity 0.2s, transform 0.1s;
-        }
+.topbar-right {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+}
 
-        button:hover { opacity: 0.9; transform: translateY(-1px); }
-        button:active { transform: translateY(0px); }
+.workspace {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  min-height: 0;
+}
 
-        .btn-purple { background: linear-gradient(135deg, #a855f7, #7c3aed); color: white; }
-        .btn-blue { background-color: #2196F3; color: white; }
-        .btn-green { background-color: #4CAF50; color: white; }
-        .btn-red { background-color: #e53935; color: white; }
+.sidebar {
+  border-right: 1px solid var(--rule2);
+  padding: 40px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
 
-        .alert {
-            text-align: center;
-            padding: 10px;
-            border-radius: 8px;
-            margin: 10px 0;
-            font-size: 14px;
-            display: none;
-        }
+.sidebar-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 28px;
+}
 
-        .alert-success { background: rgba(76,175,80,0.2); color: #81c784; }
-        .alert-error { background: rgba(229,57,53,0.2); color: #ef9a9a; }
-        .alert-info { background: rgba(168,85,247,0.2); color: #d8b4fe; }
+.step {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--rule);
+  opacity: 0.35;
+  transition: opacity 0.2s;
+  cursor: default;
+}
 
-        .page { display: none; }
-        .page.active { display: block; }
+.step:last-child { border-bottom: none; }
+.step.active { opacity: 1; }
+.step.done { opacity: 0.6; }
 
-        .footer-text {
-            text-align: center;
-            margin-top: 15px;
-            color: rgba(255,255,255,0.5);
-            font-size: 13px;
-        }
+.step-num {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  width: 20px;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
 
-        .footer-text span {
-            color: #a855f7;
-            cursor: pointer;
-        }
+.step.active .step-num { color: var(--amber); }
+.step.done .step-num { color: var(--dim); }
 
-        .footer-text span:hover { text-decoration: underline; }
+.step-info {}
 
-        .qr-container {
-            text-align: center;
-            margin: 20px 0;
-        }
+.step-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--dim);
+  margin-bottom: 3px;
+  line-height: 1.3;
+}
 
-        .qr-container img {
-            width: 200px;
-            height: 200px;
-            border-radius: 12px;
-            border: 3px solid #a855f7;
-            padding: 8px;
-            background: white;
-        }
+.step.active .step-title { color: var(--text); }
 
-        .qr-instruction {
-            color: rgba(255,255,255,0.6);
-            font-size: 13px;
-            margin-top: 12px;
-            line-height: 1.6;
-            text-align: center;
-        }
+.step-desc {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.5;
+}
 
-        .secret-box {
-            background: rgba(168,85,247,0.1);
-            border: 1px solid rgba(168,85,247,0.3);
-            border-radius: 8px;
-            padding: 10px;
-            text-align: center;
-            color: #a855f7;
-            font-size: 13px;
-            margin: 10px 0;
-            word-break: break-all;
-        }
+.step.active .step-desc { color: var(--dim); }
 
-        .dashboard-box {
-            background: rgba(255,255,255,0.05);
-            border-radius: 8px;
-            padding: 20px;
-            margin: 15px 0;
-            color: #e0e0e0;
-            font-size: 14px;
-            line-height: 1.8;
-            border: 1px solid rgba(255,255,255,0.1);
-        }
+.sidebar-note {
+  margin-top: auto;
+  padding-top: 28px;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.6;
+  border-top: 1px solid var(--rule);
+}
 
-        .tag {
-            display: inline-block;
-            background: rgba(168,85,247,0.15);
-            color: #a855f7;
-            padding: 3px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-            margin: 3px;
-            border: 1px solid rgba(168,85,247,0.3);
-        }
+.sidebar-note a { color: var(--dim); text-decoration: none; }
+.sidebar-note a:hover { color: var(--amber); }
 
-        .totp-input {
-            text-align: center;
-            font-size: 24px !important;
-            letter-spacing: 8px;
-            font-weight: bold;
-            color: #a855f7 !important;
-        }
-    </style>
+.main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 40px;
+}
+
+.form-area {
+  width: 100%;
+  max-width: 380px;
+}
+
+.panel { display: none; }
+.panel.active { display: block; }
+
+.panel-eyebrow {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: var(--amber);
+  margin-bottom: 10px;
+}
+
+.panel-heading {
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 6px;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.panel-sub {
+  font-size: 13px;
+  color: var(--dim);
+  margin-bottom: 32px;
+  line-height: 1.6;
+}
+
+.rule-line {
+  height: 1px;
+  background: var(--rule2);
+  margin-bottom: 28px;
+}
+
+.field {
+  margin-bottom: 18px;
+}
+
+.field-label {
+  display: block;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  color: var(--dim);
+  text-transform: uppercase;
+  margin-bottom: 7px;
+}
+
+.field-input {
+  width: 100%;
+  background: var(--bg2);
+  border: 1px solid var(--rule2);
+  padding: 11px 14px;
+  color: var(--text);
+  font-family: var(--body);
+  font-size: 14px;
+  outline: none;
+  border-radius: 3px;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.field-input::placeholder { color: var(--muted); }
+.field-input:focus { border-color: var(--amber-line); background: var(--bg3); }
+
+.totp-input {
+  font-family: var(--mono);
+  font-size: 22px;
+  letter-spacing: 12px;
+  text-align: center;
+  color: var(--amber-bright);
+  padding: 14px 18px;
+}
+
+.btn-row {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.btn {
+  width: 100%;
+  padding: 11px 18px;
+  border-radius: 3px;
+  border: 1px solid var(--rule2);
+  background: transparent;
+  color: var(--dim);
+  font-family: var(--body);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn:hover { border-color: var(--rule2); background: var(--bg3); color: var(--text); }
+.btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.btn-primary {
+  background: var(--amber-dim);
+  border-color: var(--amber-line);
+  color: var(--amber-bright);
+}
+
+.btn-primary:hover { background: rgba(200,136,58,0.16); color: var(--amber-bright); }
+
+.btn-ghost {
+  font-size: 13px;
+  padding: 8px;
+  color: var(--muted);
+  border-color: transparent;
+}
+
+.btn-ghost:hover { color: var(--dim); background: transparent; border-color: transparent; }
+
+.btn-danger {
+  border-color: rgba(184,80,64,0.2);
+  color: var(--red);
+}
+
+.btn-danger:hover { background: var(--red-dim); border-color: rgba(184,80,64,0.35); }
+
+.msg {
+  display: none;
+  margin-top: 16px;
+  padding: 11px 14px;
+  border-radius: 3px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.msg.visible { display: block; }
+.msg.ok { background: rgba(74,140,74,0.1); border: 1px solid rgba(74,140,74,0.2); color: #7ab87a; }
+.msg.err { background: var(--red-dim); border: 1px solid rgba(184,80,64,0.2); color: #c07870; }
+
+.qr-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  margin: 24px 0;
+}
+
+.qr-frame {
+  padding: 10px;
+  background: #fff;
+  border-radius: 4px;
+  border: 1px solid var(--rule2);
+}
+
+.qr-frame img { display: block; width: 160px; height: 160px; }
+
+.qr-manual {
+  text-align: center;
+  width: 100%;
+}
+
+.qr-manual-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.qr-secret {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--amber);
+  background: var(--bg2);
+  border: 1px solid var(--rule2);
+  border-radius: 3px;
+  padding: 8px 12px;
+  word-break: break-all;
+  letter-spacing: 0.06em;
+}
+
+.dash-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 24px 0;
+}
+
+.dash-cell {
+  background: var(--bg2);
+  border: 1px solid var(--rule2);
+  border-radius: 3px;
+  padding: 14px;
+}
+
+.dash-cell-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.dash-cell-val {
+  font-size: 13px;
+  color: var(--text);
+  font-weight: 400;
+  line-height: 1.3;
+}
+
+.dash-cell-val.highlight { color: var(--amber-bright); font-family: var(--mono); font-size: 12px; }
+
+.statusbar {
+  padding: 12px 32px;
+  border-top: 1px solid var(--rule2);
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--muted);
+  font-family: var(--mono);
+}
+
+.statusbar a { color: var(--muted); text-decoration: none; }
+.statusbar a:hover { color: var(--dim); }
+
+@media (max-width: 700px) {
+  .workspace { grid-template-columns: 1fr; }
+  .sidebar { display: none; }
+  .main { padding: 32px 20px; }
+  .topbar { padding: 12px 20px; }
+  .dash-grid { grid-template-columns: 1fr; }
+  .statusbar { padding: 12px 20px; flex-direction: column; gap: 4px; }
+}
+</style>
 </head>
 <body>
 
-<canvas id="bgCanvas"></canvas>
+<div class="graph-bg"></div>
+<div class="grain"></div>
 
-<div class="card">
+<div class="shell">
 
-    <!-- Register Page -->
-    <div id="registerPage" class="page active">
-        <h1>🔐 Create Account</h1>
-        <p class="subtitle">Register to set up 2FA protection</p>
-        <input type="text" id="regUsername" placeholder="Choose a username" />
-        <input type="password" id="regPassword" placeholder="Choose a password"
-               onkeydown="if(event.key==='Enter') submitRegistration()" />
-        <button class="btn-purple" onclick="submitRegistration()">Register</button>
-        <div id="registerAlert" class="alert"></div>
-        <div class="footer-text">
-            Already have an account? <span onclick="switchPage('loginPage')">Login here</span>
+  <div class="topbar">
+    <div class="topbar-id">2fa-auth</div>
+    <div class="topbar-right">TOTP · RFC 6238 · GOOGLE AUTHENTICATOR</div>
+  </div>
+
+  <div class="workspace">
+
+    <div class="sidebar">
+      <div class="sidebar-label">Setup flow</div>
+
+      <div class="step active" id="step-1">
+        <div class="step-num">01</div>
+        <div class="step-info">
+          <div class="step-title">Create account</div>
+          <div class="step-desc">Choose username and password</div>
         </div>
-    </div>
+      </div>
 
-    <!-- QR Code Page -->
-    <div id="qrPage" class="page">
-        <h1>📱 Scan QR Code</h1>
-        <p class="subtitle">Open Google Authenticator and scan this code</p>
-        <div class="qr-container">
-            <img id="qrImage" src="" alt="QR Code" />
+      <div class="step" id="step-2">
+        <div class="step-num">02</div>
+        <div class="step-info">
+          <div class="step-title">Scan QR code</div>
+          <div class="step-desc">Add to Google Authenticator</div>
         </div>
-        <p class="qr-instruction">
-            Can't scan? Enter this secret key manually in Google Authenticator:
-        </p>
-        <div class="secret-box" id="secretKey"></div>
-        <button class="btn-purple" onclick="switchPage('verifyPage')">
-            I've scanned it ✓
-        </button>
-    </div>
+      </div>
 
-    <!-- Verify 2FA Page -->
-    <div id="verifyPage" class="page">
-        <h1>🔐 Verify Setup</h1>
-        <p class="subtitle">Enter the 6 digit code from Google Authenticator</p>
-        <input type="text" id="verifyCode"
-               class="totp-input"
-               placeholder="000000"
-               maxlength="6"
-               onkeydown="if(event.key==='Enter') confirmTwoFactor()" />
-        <button class="btn-purple" onclick="confirmTwoFactor()">Verify & Activate 2FA</button>
-        <div id="verifyAlert" class="alert"></div>
-    </div>
-
-    <!-- Login Page -->
-    <div id="loginPage" class="page">
-        <h1>🔐 Welcome Back</h1>
-        <p class="subtitle">Login requires password + 2FA code</p>
-        <input type="text" id="loginUsername" placeholder="Enter your username" />
-        <input type="password" id="loginPassword" placeholder="Enter your password" />
-        <input type="text" id="loginTotp"
-               class="totp-input"
-               placeholder="000000"
-               maxlength="6"
-               onkeydown="if(event.key==='Enter') submitLogin()" />
-        <button class="btn-purple" onclick="submitLogin()">Login with 2FA</button>
-        <div id="loginAlert" class="alert"></div>
-        <div class="footer-text">
-            New here? <span onclick="switchPage('registerPage')">Create an account</span>
+      <div class="step" id="step-3">
+        <div class="step-num">03</div>
+        <div class="step-info">
+          <div class="step-title">Verify setup</div>
+          <div class="step-desc">Confirm your authenticator works</div>
         </div>
+      </div>
+
+      <div class="step" id="step-4">
+        <div class="step-num">04</div>
+        <div class="step-info">
+          <div class="step-title">Sign in</div>
+          <div class="step-desc">Password + 6-digit TOTP code</div>
+        </div>
+      </div>
+
+      <div class="sidebar-note">
+        Already have an account?<br>
+        <button onclick="goLogin()" style="background:none;border:none;color:var(--amber);font-family:var(--body);font-size:11px;cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:2px;margin-top:4px;">skip to sign in</button>
+        <br><br>
+        <a href="https://github.com/ShashQuash/2fa-auth-system" target="_blank">source on github ↗</a>
+      </div>
     </div>
 
-    <!-- Dashboard Page -->
-    <div id="dashboardPage" class="page">
-        <h1>🏠 Dashboard</h1>
-        <div class="dashboard-box">
-            <div id="dashboardContent"></div>
-            <br>
-            <span class="tag">✅ Password Verified</span>
-            <span class="tag">🔐 2FA Verified</span>
-            <span class="tag">⚡ JWT Active</span>
+    <div class="main">
+      <div class="form-area">
+
+        <div class="panel active" id="panel-register">
+          <div class="panel-eyebrow">STEP 01 OF 04</div>
+          <div class="panel-heading">Create your account</div>
+          <div class="panel-sub">You'll set up two-factor authentication right after registration.</div>
+          <div class="rule-line"></div>
+          <div class="field">
+            <label class="field-label">Username</label>
+            <input class="field-input" id="reg-user" type="text" placeholder="choose a username" autocomplete="off" spellcheck="false" />
+          </div>
+          <div class="field">
+            <label class="field-label">Password</label>
+            <input class="field-input" id="reg-pass" type="password" placeholder="choose a password" />
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary" id="btn-register" data-label="Continue to QR setup →" onclick="handleRegister()">Continue to QR setup →</button>
+          </div>
+          <div class="msg" id="msg-register"></div>
         </div>
-        <button class="btn-red" onclick="signOut()">Logout</button>
+
+        <div class="panel" id="panel-qr">
+          <div class="panel-eyebrow">STEP 02 OF 04</div>
+          <div class="panel-heading">Scan this QR code</div>
+          <div class="panel-sub">Open Google Authenticator, tap the + button, and scan.</div>
+          <div class="rule-line"></div>
+          <div class="qr-section">
+            <div class="qr-frame">
+              <img id="qr-img" src="" alt="QR Code" />
+            </div>
+            <div class="qr-manual">
+              <div class="qr-manual-label">Can't scan? Enter this key manually</div>
+              <div class="qr-secret" id="qr-secret"></div>
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary" onclick="goStep('panel-verify', 3)">I've added it →</button>
+          </div>
+        </div>
+
+        <div class="panel" id="panel-verify">
+          <div class="panel-eyebrow">STEP 03 OF 04</div>
+          <div class="panel-heading">Confirm it works</div>
+          <div class="panel-sub">Enter the 6-digit code currently showing in your authenticator app.</div>
+          <div class="rule-line"></div>
+          <div class="field">
+            <label class="field-label">Authenticator code</label>
+            <input class="field-input totp-input" id="verify-code" type="text" placeholder="000000" maxlength="6" inputmode="numeric" />
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary" id="btn-verify" data-label="Verify & activate →" onclick="handleVerify()">Verify & activate →</button>
+          </div>
+          <div class="msg" id="msg-verify"></div>
+        </div>
+
+        <div class="panel" id="panel-login">
+          <div class="panel-eyebrow">STEP 04 OF 04</div>
+          <div class="panel-heading">Sign in</div>
+          <div class="panel-sub">Both your password and authenticator code are required.</div>
+          <div class="rule-line"></div>
+          <div class="field">
+            <label class="field-label">Username</label>
+            <input class="field-input" id="login-user" type="text" placeholder="your username" autocomplete="off" spellcheck="false" />
+          </div>
+          <div class="field">
+            <label class="field-label">Password</label>
+            <input class="field-input" id="login-pass" type="password" placeholder="your password" />
+          </div>
+          <div class="field">
+            <label class="field-label">Authenticator code</label>
+            <input class="field-input totp-input" id="login-totp" type="text" placeholder="000000" maxlength="6" inputmode="numeric" />
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary" id="btn-login" data-label="Sign in →" onclick="handleLogin()">Sign in →</button>
+            <button class="btn btn-ghost" onclick="goStep('panel-register', 1)">← back to registration</button>
+          </div>
+          <div class="msg" id="msg-login"></div>
+        </div>
+
+        <div class="panel" id="panel-dashboard">
+          <div class="panel-eyebrow">SESSION ACTIVE</div>
+          <div class="panel-heading">Access granted</div>
+          <div class="panel-sub">Both authentication factors verified successfully.</div>
+          <div class="rule-line"></div>
+          <div class="dash-grid">
+            <div class="dash-cell">
+              <div class="dash-cell-label">Signed in as</div>
+              <div class="dash-cell-val highlight" id="dash-user">—</div>
+            </div>
+            <div class="dash-cell">
+              <div class="dash-cell-label">Session token</div>
+              <div class="dash-cell-val">JWT · 30 min</div>
+            </div>
+            <div class="dash-cell">
+              <div class="dash-cell-label">Factor 1</div>
+              <div class="dash-cell-val">bcrypt password</div>
+            </div>
+            <div class="dash-cell">
+              <div class="dash-cell-label">Factor 2</div>
+              <div class="dash-cell-val">TOTP · RFC 6238</div>
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-danger" onclick="handleLogout()">End session</button>
+          </div>
+        </div>
+
+      </div>
     </div>
+
+  </div>
+
+  <div class="statusbar">
+    <span>built by <a href="https://shashquash.github.io/portfolio" target="_blank">shrish arunesh</a></span>
+    <span>fastapi · python · pyotp</span>
+  </div>
 
 </div>
 
 <script>
-    // Base URL for all API calls
-    const BASE_URL = "https://twofa-auth-system.onrender.com";
-    let activeUser = "";
+const API = "https://twofa-auth-system.onrender.com";
+let activeUser = "";
 
-    const canvas = document.getElementById('bgCanvas');
-    const ctx = canvas.getContext('2d');
+const STEPS = ["step-1","step-2","step-3","step-4"];
 
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+function setStep(n) {
+  STEPS.forEach((id, i) => {
+    const el = document.getElementById(id);
+    el.classList.remove("active","done");
+    if (i + 1 === n) el.classList.add("active");
+    else if (i + 1 < n) el.classList.add("done");
+  });
+}
 
-    window.addEventListener('resize', () => {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+function goStep(panelId, stepNum) {
+  document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+  document.getElementById(panelId).classList.add("active");
+  setStep(stepNum);
+}
+
+function goLogin() {
+  goStep("panel-login", 4);
+}
+
+function setMsg(id, text, type) {
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.className = "msg visible " + type;
+}
+
+function clearMsg(id) {
+  document.getElementById(id).className = "msg";
+}
+
+function setLoading(btnId, loading) {
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  btn.disabled = loading;
+  btn.textContent = loading ? "processing..." : btn.dataset.label;
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("reg-pass").addEventListener("keydown", e => { if (e.key === "Enter") handleRegister(); });
+  document.getElementById("verify-code").addEventListener("keydown", e => { if (e.key === "Enter") handleVerify(); });
+  document.getElementById("login-totp").addEventListener("keydown", e => { if (e.key === "Enter") handleLogin(); });
+
+  const token = localStorage.getItem("2fa_token");
+  if (token) fetchDashboard(token);
+});
+
+async function handleRegister() {
+  const username = document.getElementById("reg-user").value.trim();
+  const password = document.getElementById("reg-pass").value.trim();
+  if (!username || !password) { setMsg("msg-register", "all fields required", "err"); return; }
+
+  clearMsg("msg-register");
+  setLoading("btn-register", true);
+
+  try {
+    const res = await fetch(`${API}/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
     });
+    const data = await res.json();
+    if (data.detail) { setMsg("msg-register", data.detail, "err"); return; }
+    activeUser = username;
+    document.getElementById("qr-img").src = `data:image/png;base64,${data.qr_code}`;
+    document.getElementById("qr-secret").textContent = data.secret;
+    goStep("panel-qr", 2);
+  } catch {
+    setMsg("msg-register", "could not reach server", "err");
+  } finally {
+    setLoading("btn-register", false);
+  }
+}
 
-    const symbols = [
-        '🔐', '🔑', '🛡️', '⚡', '🔒', '✅',
-        '2FA', 'JWT', 'AES', 'SSL', 'OTP',
-        '256', '512', '#', '$', '©', '®'
-    ];
+async function handleVerify() {
+  const code = document.getElementById("verify-code").value.trim();
+  if (!code || code.length !== 6) { setMsg("msg-verify", "enter a valid 6-digit code", "err"); return; }
 
-    class Snowflake {
-        constructor() {
-            this.init();
-        }
+  clearMsg("msg-verify");
+  setLoading("btn-verify", true);
 
-        init() {
-            this.x = Math.random() * canvas.width;
-            this.y = Math.random() * -canvas.height;
-            this.symbol = symbols[Math.floor(Math.random() * symbols.length)];
-            this.size = Math.random() * 16 + 14;
-            this.speedY = Math.random() * 0.8 + 0.3;
-            this.speedX = (Math.random() - 0.5) * 0.4;
-            this.opacity = Math.random() * 0.4 + 0.15;
-            this.wobble = Math.random() * Math.PI * 2;
-            this.wobbleSpeed = Math.random() * 0.02 + 0.005;
-        }
+  try {
+    const res = await fetch(`${API}/verify-2fa`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: activeUser, totp_code: code }),
+    });
+    const data = await res.json();
+    if (data.detail) { setMsg("msg-verify", data.detail, "err"); return; }
+    setMsg("msg-verify", "2FA activated — redirecting to sign in", "ok");
+    setTimeout(() => goStep("panel-login", 4), 1400);
+  } catch {
+    setMsg("msg-verify", "could not reach server", "err");
+  } finally {
+    setLoading("btn-verify", false);
+  }
+}
 
-        update() {
-            this.wobble += this.wobbleSpeed;
-            this.x += Math.sin(this.wobble) * 0.5 + this.speedX;
-            this.y += this.speedY;
-            if (this.y > canvas.height + 30) {
-                this.init();
-                this.y = -30;
-            }
-        }
+async function handleLogin() {
+  const username = document.getElementById("login-user").value.trim();
+  const password = document.getElementById("login-pass").value.trim();
+  const totpCode = document.getElementById("login-totp").value.trim();
+  if (!username || !password || !totpCode) { setMsg("msg-login", "all fields required", "err"); return; }
 
-        draw() {
-            ctx.save();
-            ctx.globalAlpha = this.opacity;
-            ctx.font = `${this.size}px monospace`;
-            ctx.fillStyle = '#a855f7';
-            ctx.fillText(this.symbol, this.x, this.y);
-            ctx.restore();
-        }
-    }
+  clearMsg("msg-login");
+  setLoading("btn-login", true);
 
-    const snowflakes = [];
-    for (let i = 0; i < 80; i++) {
-        const flake = new Snowflake();
-        flake.y = Math.random() * canvas.height;
-        snowflakes.push(flake);
-    }
+  try {
+    const res = await fetch(`${API}/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password, totp_code: totpCode }),
+    });
+    const data = await res.json();
+    if (data.detail) { setMsg("msg-login", data.detail, "err"); return; }
+    localStorage.setItem("2fa_token", data.access_token);
+    fetchDashboard(data.access_token);
+  } catch {
+    setMsg("msg-login", "could not reach server", "err");
+  } finally {
+    setLoading("btn-login", false);
+  }
+}
 
-    function animate() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        snowflakes.forEach(flake => {
-            flake.update();
-            flake.draw();
-        });
-        requestAnimationFrame(animate);
-    }
+async function fetchDashboard(token) {
+  try {
+    const res = await fetch(`${API}/dashboard`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) { localStorage.removeItem("2fa_token"); goStep("panel-login", 4); return; }
+    const data = await res.json();
+    const username = data.message.match(/Authenticated as (.+)\./)?.[1] || "user";
+    document.getElementById("dash-user").textContent = username;
+    document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+    document.getElementById("panel-dashboard").classList.add("active");
+    STEPS.forEach(id => {
+      const el = document.getElementById(id);
+      el.classList.remove("active");
+      el.classList.add("done");
+    });
+  } catch {
+    goStep("panel-login", 4);
+  }
+}
 
-    animate();
-
-    function switchPage(pageId) {
-        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-        document.getElementById(pageId).classList.add('active');
-    }
-
-    function displayMessage(elementId, message, type) {
-        const el = document.getElementById(elementId);
-        el.textContent = message;
-        el.className = `alert alert-${type}`;
-        el.style.display = 'block';
-    }
-
-    async function submitRegistration() {
-        const username = document.getElementById('regUsername').value.trim();
-        const password = document.getElementById('regPassword').value.trim();
-
-        if (!username || !password) {
-            displayMessage('registerAlert', 'Please fill in all fields.', 'error');
-            return;
-        }
-
-        const response = await fetch(`${BASE_URL}/register`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
-        });
-
-        const data = await response.json();
-
-        if (data.detail) {
-            displayMessage('registerAlert', data.detail, 'error');
-        } else {
-            activeUser = username;
-            document.getElementById('qrImage').src = `data:image/png;base64,${data.qr_code}`;
-            document.getElementById('secretKey').textContent = data.secret;
-            switchPage('qrPage');
-        }
-    }
-
-    async function confirmTwoFactor() {
-        const code = document.getElementById('verifyCode').value.trim();
-
-        if (!code || code.length !== 6) {
-            displayMessage('verifyAlert', 'Please enter a valid 6 digit code.', 'error');
-            return;
-        }
-
-        const response = await fetch(`${BASE_URL}/verify-2fa`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                username: activeUser,
-                totp_code: code
-            })
-        });
-
-        const data = await response.json();
-
-        if (data.detail) {
-            displayMessage('verifyAlert', data.detail, 'error');
-        } else {
-            displayMessage('verifyAlert', '2FA activated! Redirecting to login...', 'success');
-            setTimeout(() => switchPage('loginPage'), 1500);
-        }
-    }
-
-    async function submitLogin() {
-        const username = document.getElementById('loginUsername').value.trim();
-        const password = document.getElementById('loginPassword').value.trim();
-        const totpCode = document.getElementById('loginTotp').value.trim();
-
-        if (!username || !password || !totpCode) {
-            displayMessage('loginAlert', 'Please fill in all fields.', 'error');
-            return;
-        }
-
-        const response = await fetch(`${BASE_URL}/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                username,
-                password,
-                totp_code: totpCode
-            })
-        });
-
-        const data = await response.json();
-
-        if (data.detail) {
-            displayMessage('loginAlert', data.detail, 'error');
-        } else {
-            localStorage.setItem('session_key', data.access_token);
-            fetchDashboard();
-        }
-    }
-
-    async function fetchDashboard() {
-        const token = localStorage.getItem('session_key');
-
-        const response = await fetch(`${BASE_URL}/dashboard`, {
-            method: 'GET',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-        if (response.status === 401) {
-            switchPage('loginPage');
-            return;
-        }
-
-        const data = await response.json();
-        document.getElementById('dashboardContent').innerHTML =
-            `<strong>${data.message}</strong><br><br>${data.security}<br><br>${data.data}`;
-        switchPage('dashboardPage');
-    }
-
-    function signOut() {
-        localStorage.removeItem('session_key');
-        switchPage('loginPage');
-    }
-
-    window.onload = function() {
-        const token = localStorage.getItem('session_key');
-        if (token) fetchDashboard();
-    }
+function handleLogout() {
+  localStorage.removeItem("2fa_token");
+  goStep("panel-register", 1);
+}
 </script>
-
 </body>
 </html>
