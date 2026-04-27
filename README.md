@@ -1,8 +1,8 @@
 # 2FA Authentication System
 
-Two-factor authentication system built with FastAPI, implementing TOTP-based login, bcrypt password hashing, and JWT session management — integrated with Google Authenticator.
+Two-factor authentication system built with FastAPI, implementing TOTP-based login, bcrypt password hashing, and JWT session management, integrated with Google Authenticator.
 
-Built by Shrish Arunesh — CS student in Berlin, focused on cybersecurity and backend development.
+Built by Shrish Arunesh: CS student in Berlin, focused on cybersecurity and backend development.
 
 ---
 
@@ -26,9 +26,9 @@ Python · FastAPI · pyotp · qrcode · bcrypt · JWT · HTML · CSS · JavaScri
 1. User registers → server generates a unique TOTP secret key
 2. Secret key is encoded into a QR code
 3. User scans QR code with Google Authenticator
-4. Phone and server now share the same secret — neither transmits it again
+4. Phone and server now share the same secret, neither transmits it again
 5. Every 30 seconds both independently generate the same 6-digit code (RFC 6238)
-6. At login — user submits password + current 6-digit code
+6. At login user submits password + current 6-digit code
 7. Server verifies both → issues JWT token
 
 ---
