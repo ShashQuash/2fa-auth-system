@@ -1,0 +1,31 @@
+name: security
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install security tools
+        run: pip install bandit pip-audit detect-secrets
+
+      - name: Bandit (static analysis)
+        run: bandit -r . -ll
+
+      - name: pip-audit (dependency CVEs)
+        run: pip-audit -r requirements.txt
+
+      - name: detect-secrets (committed secrets)
+        run: detect-secrets scan
