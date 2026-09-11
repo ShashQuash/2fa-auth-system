@@ -10,7 +10,8 @@ from fastapi import FastAPI, HTTPException, status, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt
+import jwt
+from jwt import PyJWTError
 from passlib.context import CryptContext
 from pydantic import BaseModel, field_validator
 from slowapi import Limiter
@@ -75,6 +76,18 @@ class RegisterRequest(BaseModel):
             raise ValueError("field cannot be empty")
         return v
 
+    @field_validator("password")
+    @classmethod
+    def bcrypt_safe_length(cls, v: str) -> str:
+        # bcrypt reads at most 72 BYTES and silently ignores everything after
+        # that. Without an upper bound a long password is accepted but only
+        # partly verified. Count bytes, not characters: non-ASCII is multi-byte.
+        if len(v) < 8:
+            raise ValueError("password must be at least 8 characters")
+        if len(v.encode("utf-8")) > 72:
+            raise ValueError("password must be at most 72 bytes")
+        return v
+
 
 class VerifyRequest(BaseModel):
     username: str
@@ -85,6 +98,17 @@ class LoginRequest(BaseModel):
     username: str
     password: str
     totp_code: str
+
+    @field_validator("password")
+    @classmethod
+    def bcrypt_safe_length(cls, v: str) -> str:
+        # Capped at login as well as registration. Otherwise a 100-byte
+        # password would be truncated to the same 72 bytes as a shorter one
+        # and still authenticate. No minimum here: that is a registration
+        # policy and enforcing it at login tells an attacker the policy.
+        if len(v.encode("utf-8")) > 72:
+            raise ValueError("password must be at most 72 bytes")
+        return v
 
 
 # bcrypt hashes a password; it does not encrypt it (you can't get the original
@@ -150,7 +174,7 @@ def extract_user(token: str = Depends(token_scheme)) -> str:
         username = claims.get("sub")
         if not username or username not in user_store:
             raise error
-    except JWTError:
+    except PyJWTError:
         raise error
     return username
 
@@ -193,12 +217,31 @@ def verify_2fa(request: Request, body: VerifyRequest):
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Verification failed. Check the code and try again.",
     )
+    # Same lockout as /login. Without it this was the soft way in: a six-digit
+    # code behind nothing but a per-IP rate limit, and a success here flips
+    # `verified` on an account the caller does not hold the password for.
+    if is_locked(body.username):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Account temporarily locked after repeated failures. Try again later.",
+        )
+
     record = user_store.get(body.username)
     if record is None:
+        # Deliberately not counted. failed_attempts is keyed on the supplied
+        # username, so counting misses would let anyone grow that dict without
+        # limit. The response is identical either way, so nothing leaks.
         raise failure
     if not pyotp.TOTP(record["otp_secret"]).verify(body.totp_code):
+        register_failure(body.username)
         raise failure
+
     record["verified"] = True
+    # Burn the code here too. Without this, the code used to activate 2FA can
+    # be replayed straight into /login inside the same 30-second window, which
+    # is the one hole in the replay protection the README claims.
+    record["last_totp"] = body.totp_code
+    reset_failures(body.username)
     return {"message": "2FA is now active on your account.", "status": "verified"}
 
 
