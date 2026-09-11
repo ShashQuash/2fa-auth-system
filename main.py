@@ -10,7 +10,7 @@ from fastapi import FastAPI, HTTPException, status, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordBearer
-import jwt
+import jwt 
 from jwt import PyJWTError
 from passlib.context import CryptContext
 from pydantic import BaseModel, field_validator
