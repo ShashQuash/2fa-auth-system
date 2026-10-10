@@ -27,7 +27,7 @@ pillow==12.3.0
 # an unfixable permanent CI failure is not worth carrying. PyJWT has zero
 # dependencies and removes python-jose, ecdsa, rsa, pyasn1, six, cryptography,
 # cffi and pycparser from the tree.
-PyJWT==2.14.0
+PyJWT==2.15.0
 
 # bcrypt is held at 4.0.1 on purpose. passlib 1.7.4 runs an internal self-test
 # on first use that hashes a password longer than 72 bytes. bcrypt 4.1 and
