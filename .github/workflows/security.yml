@@ -28,4 +28,4 @@ jobs:
         run: pip-audit -r requirements.txt
 
       - name: detect-secrets (committed secrets)
-        run: detect-secrets scan
+        run: git ls-files -z | xargs -0 detect-secrets-hook
