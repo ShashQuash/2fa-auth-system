@@ -89,7 +89,7 @@ Set a real signing key before deploying anywhere:
 
 ```bash
 $env:JWT_SECRET = "<your-long-random-secret>"   # PowerShell
-eexport JWT_SECRET="<your-long-random-secret>"    # macOS / Linux
+export JWT_SECRET="<your-long-random-secret>"    # macOS / Linux
 ```
 
 ## Layout
